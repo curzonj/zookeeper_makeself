@@ -14,7 +14,7 @@ MAKESELF_DIR=makeself
 [ -f $MAKESELF_FILE ] || wget -O${MAKESELF_FILE} $MAKESELF_URL
 [ -d $MAKESELF_DIR ] || tar xf $MAKESELF_FILE
 
-if [ -f Berksfile ]; then
+if [ -f Berksfile ] || [ -d cookbooks ]; then
   # TODO these need to be the same as CORE_VERSION in chroot.sh
   CORE_VERSION=13.04
   CORE_ARCH=amd64
@@ -25,13 +25,15 @@ if [ -f Berksfile ]; then
 
   [ -f $CHEF_FILE ] || wget -O$CHEF_FILE $CHEF_URL
 
-  if ! which berks; then
-    apt-get update
-    apt-get -y install build-essential libxml2-dev libxslt-dev
-    apt-get -y --no-install-recommends install ruby1.9.1 ruby1.9.1-dev
-    gem install berkshelf
-  fi
+  if [ -f Berksfile ]; then
+    if ! which berks; then
+      apt-get update
+      apt-get -y install build-essential libxml2-dev libxslt-dev
+      apt-get -y --no-install-recommends install ruby1.9.1 ruby1.9.1-dev
+      gem install berkshelf
+    fi
 
-  mkdir -p tmp
-  berks install -p tmp/vendored_cookbooks
+    mkdir -p tmp
+    berks install -p tmp/vendored_cookbooks
+  fi
 fi
