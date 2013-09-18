@@ -9,7 +9,7 @@ fi
 
 MAKESELF_URL=https://github.com/megastep/makeself/archive/master.tar.gz
 MAKESELF_FILE=makeself.tar.gz
-MAKESELF_DIR=makeself-master
+MAKESELF_DIR=makeself
 
 [ -f $MAKESELF_FILE ] || wget -O${MAKESELF_FILE} $MAKESELF_URL
 [ -d $MAKESELF_DIR ] || tar xf $MAKESELF_FILE
@@ -35,14 +35,3 @@ if [ -f Berksfile ]; then
   mkdir -p tmp
   berks install -p tmp/vendored_cookbooks
 fi
-
-./chroot.sh $@
-
-OPTS=--nox11
-
-if [ -f package.lsm ]; then
-  OPTS="$OPTS --lsm package.lsm"
-fi
-
-rm -f package.bin
-$MAKESELF_DIR/makeself.sh $OPTS $BUILD_DIR package.bin "Container" chroot ./ env -i /run.sh

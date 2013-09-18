@@ -9,15 +9,18 @@ if [ $(id -u) != '0' ]; then
 fi
 
 BUILD_DIR=
+SKIP_PACKAGE=
 CORE_ARCH=amd64
 CORE_VERSION=13.04
 CORE_URL=http://cdimage.ubuntu.com/ubuntu-core/releases/$CORE_VERSION/release/ubuntu-core-$CORE_VERSION-core-$CORE_ARCH.tar.gz
 CORE_TGZ=$(basename $CORE_URL)
 
-while getopts “p:” OPTION
+while getopts “sp:” OPTION
 do
   case $OPTION in
     p) BUILD_DIR=$OPTARG
+      ;;
+    s) SKIP_PACKAGE=1
   esac
 done
 
@@ -30,7 +33,6 @@ else
 fi
 
 echo "Build directory is: $BUILD_DIR"
-mkdir -p $BUILD_DIR/tmp/outputs
 
 if [ ! -d $BUILD_DIR/etc ]; then
   [ -f $CORE_TGZ ] || wget $CORE_URL
@@ -67,9 +69,18 @@ set -e
 # buffer
 set +x
 mkdir -p /tmp/debs
-cp $BUILD_DIR/var/cache/apt/archives/*.deb /tmp/debs/
 
-cp -r $BUILD_DIR/tmp/outputs ./
+if ls $BUILD_DIR/var/cache/apt/archives/*.deb; then
+  cp $BUILD_DIR/var/cache/apt/archives/*.deb /tmp/debs/
+fi
+
+umount $BUILD_DIR/proc
+umount $BUILD_DIR/mnt
+
+if [ -z $SKIP_PACKAGE ]; then
+  makeself/makeself.sh --nox11 $BUILD_DIR package.bin "Container" $(cat $BUILD_DIR/command_line)
+fi
+
 set -x
 
 echo "Build directory is: $BUILD_DIR"
