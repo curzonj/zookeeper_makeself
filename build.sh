@@ -32,6 +32,7 @@ zookeeper-log-directory=/opt/zookeeper_transactions
 client-port=2181
 connect-port=2888
 election-port=3888
+auto-manage-instances=1
 EOS
 
 ## runit service script
@@ -92,7 +93,7 @@ fi
 
 apt-get -y clean
 
-cp run.sh /
-chmod +x /run.sh
+cp run.sh cleanup.sh /
+chmod +x /run.sh /cleanup.sh
 
 echo -n "./run.sh" > /command_line

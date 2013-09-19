@@ -4,3 +4,4 @@
 *.deb
 makeself
 tmp
+aws_keys.properties

@@ -88,6 +88,8 @@ if [ -z $SKIP_PACKAGE ] && [ $exit_code -eq 0 ]; then
     cd $BUILD_DIR
     $SOURCE_DIR/makeself/makeself.sh --nox11 ./ $SOURCE_DIR/package.bin "Container" $(cat command_line)
   )
+
+  rm -r $BUILD_DIR
 fi
 
 set +x
