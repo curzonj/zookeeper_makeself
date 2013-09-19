@@ -8,6 +8,7 @@ if [ $(id -u) != '0' ]; then
   exec sudo $0 $@
 fi
 
+SOURCE_DIR=`pwd`
 BUILD_DIR=
 SKIP_PACKAGE=
 CORE_ARCH=amd64
@@ -66,26 +67,29 @@ exit_code=$?
 
 set -e
 
+mkdir -p /tmp/debs
+
 # This is so huge it just clears the scrollback
 # buffer
 set +x
-mkdir -p /tmp/debs
-
 if ls $BUILD_DIR/var/cache/apt/archives/*.deb > /dev/null; then
   cp $BUILD_DIR/var/cache/apt/archives/*.deb /tmp/debs/
 fi
+set -x
 
 umount $BUILD_DIR/proc
 umount $BUILD_DIR/mnt
 
-if [ -z $SKIP_PACKAGE ]; then
+if [ -z $SKIP_PACKAGE ] && [ $exit_code -eq 0 ]; then
   rm $BUILD_DIR/etc/apt/apt.conf.d/01proxy
   rm $BUILD_DIR/etc/resolv.conf
 
-  makeself/makeself.sh --nox11 $BUILD_DIR package.bin "Container" $(cat $BUILD_DIR/command_line)
+  (
+    cd $BUILD_DIR
+    $SOURCE_DIR/makeself/makeself.sh --nox11 ./ $SOURCE_DIR/package.bin "Container" $(cat command_line)
+  )
 fi
 
-set -x
-
+set +x
 echo "Build directory is: $BUILD_DIR"
 echo "Exit code of the inner shell was: $exit_code"
