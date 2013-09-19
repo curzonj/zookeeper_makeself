@@ -22,11 +22,18 @@ apt-get -y install wget runit openjdk-7-jdk openjdk-7-jre-headless
 service runsvdir stop || true
 
 mkdir -p /service/exhibitor
+mkdir -p /opt/exhibitor_run
+mkdir -p /opt/zookeeper_snapshot
+mkdir -p /opt/zookeeper_transactions
 
+# TODO really?
+chown nobody:nogroup /opt/{exhibitor_run,zookeeper_snapshot,zookeeper_transactions}
+
+# TODO add logging
 cat > /service/exhibitor/run <<EOS
 #!/bin/bash
 
-java -jar /opt/exhibitor-1.5.0.jar -c file
+exec chpst -u nobody:nogroup java -jar /opt/exhibitor-1.5.0.jar -c file --hostname PUT_LOCAL_IPADDRESS_HERE_HOW? --fsconfigdir /opt/exhibitor_run  --prefspath /opt/exhibitor_run/user.prefs
 EOS
 chmod +x /service/exhibitor/run
 
@@ -55,8 +62,22 @@ if [ ! -f /opt/exhibitor-1.5.0.jar ]; then
   )
 fi
 
-#download /opt /opt/zookeeper.jar http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz
+download /opt http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz
+[ -d /opt/zookeeper-3.4.5 ] || tar xzf /opt/zookeeper-3.4.5.tar.gz
+
+chown -R nobody:nogroup /opt/zookeeper-3.4.5/conf
 
 apt-get -y clean
 
-echo -n "pwd" > /command_line
+# TODO setup a control group to make it easy to shutdown the processes for an upgrade
+
+cat > /init <<EOS
+#!/bin/bash
+
+mount -t proc proc ./proc
+exec chroot ./ runsvdir -P /service
+EOS
+
+chmod +x /init
+
+echo -n "./init" > /command_line
