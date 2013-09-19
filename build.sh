@@ -16,7 +16,7 @@ EOS
 ## fixed the the path to all it's libraries were added to /etc/ld.so.conf.d/
 
 apt-get update
-apt-get -y install wget runit openjdk-7-jdk openjdk-7-jre-headless
+apt-get -y install wget runit openjdk-7-jdk openjdk-7-jre-headless moreutils
 
 # Because runit package gets started on install
 service runsvdir stop || true
@@ -26,14 +26,25 @@ mkdir -p /opt/exhibitor_run
 mkdir -p /opt/zookeeper_snapshot
 mkdir -p /opt/zookeeper_transactions
 
-# TODO really?
 chown nobody:nogroup /opt/{exhibitor_run,zookeeper_snapshot,zookeeper_transactions}
 
-# TODO add logging
-cat > /service/exhibitor/run <<EOS
-#!/bin/bash
+# TODO  setup the default config
+# zoo-cfg-extra=tickTime\=2000
+# check-ms=3000
+# zookeeper-install-directory=/opt/zookeeper-3.4.5
+# zookeeper-data-directory=/opt/zookeeper_snapshot
+# zookeeper-log-directory=/opt/zookeeper_transactions
+# client-port=2181
+# connect-port=2888
+# election-port=3888
 
-exec chpst -u nobody:nogroup java -jar /opt/exhibitor-1.5.0.jar -c file --hostname PUT_LOCAL_IPADDRESS_HERE_HOW? --fsconfigdir /opt/exhibitor_run  --prefspath /opt/exhibitor_run/user.prefs
+
+# TODO add logging
+cat > /service/exhibitor/run <<"EOS"
+#!/bin/bash
+IPV4=$(ifdata -pa eth0)
+
+exec chpst -u nobody:nogroup java -jar /opt/exhibitor-1.5.0.jar -c file --hostname $IPV4 --fsconfigdir /opt/exhibitor_run  --prefspath /opt/exhibitor_run/user.prefs
 EOS
 chmod +x /service/exhibitor/run
 
