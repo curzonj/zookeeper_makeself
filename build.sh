@@ -23,7 +23,6 @@ mkdir -p /opt/exhibitor_run
 mkdir -p /opt/zookeeper_snapshot
 mkdir -p /opt/zookeeper_transactions
 
-chown nobody:nogroup /opt/{exhibitor_run,zookeeper_snapshot,zookeeper_transactions}
 
 cat > /opt/exhibitor_run/exhibitor.defaultconfig <<EOS
 zoo-cfg-extra=tickTime\=2000
@@ -41,7 +40,7 @@ cat > /service/exhibitor/run <<"EOS"
 #!/bin/bash
 IPV4=$(ifdata -pa eth0)
 
-exec chpst -u nobody:nogroup java -jar /opt/exhibitor-1.5.0.jar -c file --hostname $IPV4 --fsconfigdir /opt/exhibitor_run  --prefspath /opt/exhibitor_run/user.prefs --defaultconfig /opt/exhibitor_run/exhibitor.defaultconfig
+exec chpst -u nobody /usr/lib/jvm/java-7-openjdk-amd64/jre/bin/java -jar /opt/exhibitor-1.5.0.jar -c file --hostname $IPV4 --fsconfigdir /opt/exhibitor_run  --prefspath /opt/exhibitor_run/user.prefs --defaultconfig /opt/exhibitor_run/exhibitor.defaultconfig
 EOS
 chmod +x /service/exhibitor/run
 
@@ -87,23 +86,36 @@ fi
 download /opt http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz
 [ -d /opt/zookeeper-3.4.5 ] || tar -xzf /opt/zookeeper-3.4.5.tar.gz -C /opt
 
-chown -R nobody:nogroup /opt/zookeeper-3.4.5/conf
 
 apt-get -y clean
 
 # We have no need of any setuid binaries in this environment
-find /usr /bin /sbin -type f \( -perm -4000 -o -perm -2000 \) -exec chmod -R gu-s {} \;
+#find /usr /bin /sbin -type f \( -perm -4000 -o -perm -2000 \) -exec chmod -R gu-s {} \;
 
 cat > /init <<"EOS"
 #!/bin/bash
 
+set -e
+set -x
+
+# makeself puts mode 700 on this directory by default which causes
+# problems for running things as non root users
+chmod 755 .
+
 # The cgroup makes it easy to keep track of spawned processes
 CGROUP=/sys/fs/cgroup/cpu/zookeeper_$$
-mkdir CGROUP
+mkdir $CGROUP
 echo 0 > $CGROUP/tasks
 
+trap "kill -9 \$(cat $CGROUP); umount ./proc" 0 1 2 3 13 15
 mount -t proc proc ./proc
-exec chroot ./ runsvdir -P /service
+
+# Makeself tarball doesn't seem to respect ownership even as root
+chown -R nobody:nogroup opt/{exhibitor_run,zookeeper_snapshot,zookeeper_transactions}
+chown -R nobody:nogroup opt/zookeeper-3.4.5/conf
+
+# Don't `exec` this because we need our traps to function
+chroot ./ runsvdir -P /service
 EOS
 
 chmod +x /init
