@@ -13,7 +13,7 @@ deb http://archive.ubuntu.com/ubuntu/ raring-security main restricted
 EOS
 
 apt-get update
-apt-get -y install wget runit openjdk-7-jdk openjdk-7-jre-headless moreutils unzip
+apt-get --no-install-recommends -y install wget runit openjdk-7-jdk openjdk-7-jre-headless moreutils unzip 
 
 # Because runit package gets started on install
 service runsvdir stop || true
@@ -65,14 +65,15 @@ function download() {
   [ -f $path/$file ] || wget -O$path/$file $url
 }
 
-mkdir -p /opt/exhibitor
 
 # TODO we could build this jar seperately and put it in object storage
-download /opt/exhibitor http://services.gradle.org/distributions/gradle-1.5-bin.zip
-download /opt/exhibitor https://raw.github.com/Netflix/exhibitor/master/exhibitor-standalone/src/main/resources/buildscripts/standalone/gradle/build.gradle
-
 if [ ! -f /opt/exhibitor-1.5.0.jar ]; then
   (
+    mkdir -p /opt/exhibitor
+
+    download /opt/exhibitor http://services.gradle.org/distributions/gradle-1.5-bin.zip
+    download /opt/exhibitor https://raw.github.com/Netflix/exhibitor/master/exhibitor-standalone/src/main/resources/buildscripts/standalone/gradle/build.gradle
+
     cd /opt/exhibitor
     unzip gradle-1.5-bin.zip
     PATH=/opt/exhibitor/gradle-1.5/bin:$PATH
@@ -89,6 +90,9 @@ download /opt http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5
 chown -R nobody:nogroup /opt/zookeeper-3.4.5/conf
 
 apt-get -y clean
+
+# We have no need of any setuid binaries in this environment
+find /usr /bin /sbin -type f \( -perm -4000 -o -perm -2000 \) -exec chmod -R gu-s {} \;
 
 cat > /init <<"EOS"
 #!/bin/bash
