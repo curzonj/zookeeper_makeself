@@ -46,8 +46,11 @@ cp /etc/resolv.conf etc/
 # The cgroup makes it easy to keep track of spawned processes
 MYSELF=$$
 CGROUP=/sys/fs/cgroup/cpu/zookeeper_$MYSELF
-mkdir $CGROUP
-echo 0 > $CGROUP/tasks
+
+if [ -d /sys/fs/cgroup/cpu ]; then
+  mkdir $CGROUP
+  echo 0 > $CGROUP/tasks
+fi
 
 touch opt/zookeeper-3.4.5/zookeeper.out
 chown nobody:nogroup opt/zookeeper-3.4.5/zookeeper.out
@@ -58,7 +61,8 @@ chown -R nobody:nogroup opt/zookeeper_snapshot
 chown -R nobody:nogroup opt/zookeeper_transactions
 chown -R nobody:nogroup opt/zookeeper-3.4.5/conf
 
-trap "/cleanup.sh" 0 1 2 3 13 15
+SOURCE_DIR=`pwd`
+trap "$SOURCE_DIR/cleanup.sh $MYSELF $CGROUP" 0 1 2 3 13 15
 mount -t proc proc ./proc
 
 # Don't `exec` this because we need our traps to function
