@@ -89,9 +89,6 @@ download /opt http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5
 
 apt-get -y clean
 
-# We have no need of any setuid binaries in this environment
-#find /usr /bin /sbin -type f \( -perm -4000 -o -perm -2000 \) -exec chmod -R gu-s {} \;
-
 cat > /init <<"EOS"
 #!/bin/bash
 
@@ -107,7 +104,7 @@ CGROUP=/sys/fs/cgroup/cpu/zookeeper_$$
 mkdir $CGROUP
 echo 0 > $CGROUP/tasks
 
-trap "kill -9 \$(cat $CGROUP); umount ./proc" 0 1 2 3 13 15
+trap "umount ./proc; kill -9 \$(cat $CGROUP/tasks)" 0 1 2 3 13 15
 mount -t proc proc ./proc
 
 # Makeself tarball doesn't seem to respect ownership even as root
