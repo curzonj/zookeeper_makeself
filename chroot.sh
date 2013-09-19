@@ -70,7 +70,7 @@ set -e
 set +x
 mkdir -p /tmp/debs
 
-if ls $BUILD_DIR/var/cache/apt/archives/*.deb; then
+if ls $BUILD_DIR/var/cache/apt/archives/*.deb > /dev/null; then
   cp $BUILD_DIR/var/cache/apt/archives/*.deb /tmp/debs/
 fi
 
