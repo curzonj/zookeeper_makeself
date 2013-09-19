@@ -5,7 +5,6 @@ set -x
 
 export LC_ALL=C
 
-
 cat > /etc/apt/sources.list <<EOS
 deb http://archive.ubuntu.com/ubuntu/ raring main restricted universe
 deb http://archive.ubuntu.com/ubuntu/ raring-updates main restricted universe
@@ -40,7 +39,7 @@ cat > /service/exhibitor/run <<"EOS"
 #!/bin/bash
 IPV4=$(ifdata -pa eth0)
 
-exec chpst -u nobody /usr/lib/jvm/java-7-openjdk-amd64/jre/bin/java -jar /opt/exhibitor-1.5.0.jar -c file --hostname $IPV4 --fsconfigdir /opt/exhibitor_run  --prefspath /opt/exhibitor_run/user.prefs --defaultconfig /opt/exhibitor_run/exhibitor.defaultconfig
+exec chpst -u nobody /usr/lib/jvm/java-7-openjdk-amd64/jre/bin/java -jar /opt/exhibitor-1.5.0.jar --hostname $IPV4 --prefspath /opt/exhibitor_run/user.prefs --defaultconfig /opt/exhibitor_run/exhibitor.defaultconfig $(cat /opt/exhibitor_run/cmdline)
 EOS
 chmod +x /service/exhibitor/run
 
@@ -48,6 +47,8 @@ mkdir -p /service/exhibitor/log
 mkdir -p /var/log/exhibitor
 
 ## runit logging script
+# TODO change to remote syslogging and configure destination
+# with cmdline options to the run.sh script
 cat > /service/exhibitor/log/run <<"EOS"
 #!/bin/bash
 
@@ -83,38 +84,15 @@ if [ ! -f /opt/exhibitor-1.5.0.jar ]; then
   )
 fi
 
-download /opt http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz
-[ -d /opt/zookeeper-3.4.5 ] || tar -xzf /opt/zookeeper-3.4.5.tar.gz -C /opt
-
+[ -d /opt/zookeeper-3.4.5 ] || (
+  download /opt http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz
+  tar -xzf /opt/zookeeper-3.4.5.tar.gz -C /opt
+  rm /opt/zookeeper-3.4.5.tar.gz
+)
 
 apt-get -y clean
 
-cat > /init <<"EOS"
-#!/bin/bash
+cp run.sh /
+chmod +x /run.sh
 
-set -e
-set -x
-
-# makeself puts mode 700 on this directory by default which causes
-# problems for running things as non root users
-chmod 755 .
-
-# The cgroup makes it easy to keep track of spawned processes
-CGROUP=/sys/fs/cgroup/cpu/zookeeper_$$
-mkdir $CGROUP
-echo 0 > $CGROUP/tasks
-
-trap "umount ./proc; kill -9 \$(cat $CGROUP/tasks)" 0 1 2 3 13 15
-mount -t proc proc ./proc
-
-# Makeself tarball doesn't seem to respect ownership even as root
-chown -R nobody:nogroup opt/{exhibitor_run,zookeeper_snapshot,zookeeper_transactions}
-chown -R nobody:nogroup opt/zookeeper-3.4.5/conf
-
-# Don't `exec` this because we need our traps to function
-chroot ./ runsvdir -P /service
-EOS
-
-chmod +x /init
-
-echo -n "./init" > /command_line
+echo -n "./run.sh" > /command_line
