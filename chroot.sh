@@ -40,6 +40,7 @@ if [ ! -d $BUILD_DIR/etc ]; then
 fi
 
 cp /etc/resolv.conf $BUILD_DIR/etc/
+cp /etc/apt/apt.conf.d/01proxy $BUILD_DIR/etc/apt/apt.conf.d/
 
 if [ -d /tmp/debs ]; then
   # This is so huge it just clears the scrollback
@@ -78,6 +79,9 @@ umount $BUILD_DIR/proc
 umount $BUILD_DIR/mnt
 
 if [ -z $SKIP_PACKAGE ]; then
+  rm $BUILD_DIR/etc/apt/apt.conf.d/01proxy
+  rm $BUILD_DIR/etc/resolv.conf
+
   makeself/makeself.sh --nox11 $BUILD_DIR package.bin "Container" $(cat $BUILD_DIR/command_line)
 fi
 
