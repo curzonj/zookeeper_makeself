@@ -24,7 +24,7 @@ mkdir -p /opt/zookeeper_transactions
 
 
 cat > /opt/exhibitor_run/exhibitor.defaultconfig <<EOS
-zoo-cfg-extra=tickTime\=2000
+zoo-cfg-extra=tickTime\=2000&initLimit\=5&syncLimit\=2
 check-ms=3000
 zookeeper-install-directory=/opt/zookeeper-3.4.5
 zookeeper-data-directory=/opt/zookeeper_snapshot
@@ -33,6 +33,8 @@ client-port=2181
 connect-port=2888
 election-port=3888
 auto-manage-instances=1
+auto-manage-instances-settling-period-ms=5000
+observer-threshold=4
 EOS
 
 ## runit service script
@@ -48,8 +50,9 @@ mkdir -p /service/exhibitor/log
 mkdir -p /var/log/exhibitor
 
 ## runit logging script
-# TODO change to remote syslogging and configure destination
-# with cmdline options to the run.sh script
+# TODO change to remote syslogging and configure destination with cmdline
+# options to the run.sh script. We also need forward zookeeper.out to
+# remote logging.
 cat > /service/exhibitor/log/run <<"EOS"
 #!/bin/bash
 
@@ -68,22 +71,20 @@ function download() {
 
 
 # TODO we could build this jar seperately and put it in object storage
-if [ ! -f /opt/exhibitor-1.5.0.jar ]; then
-  (
-    mkdir -p /opt/exhibitor
+[ -f /opt/exhibitor-1.5.0.jar ] || (
+  mkdir -p /opt/exhibitor
 
-    download /opt/exhibitor http://services.gradle.org/distributions/gradle-1.5-bin.zip
-    download /opt/exhibitor https://raw.github.com/Netflix/exhibitor/master/exhibitor-standalone/src/main/resources/buildscripts/standalone/gradle/build.gradle
+  download /opt/exhibitor http://services.gradle.org/distributions/gradle-1.5-bin.zip
+  download /opt/exhibitor https://raw.github.com/Netflix/exhibitor/master/exhibitor-standalone/src/main/resources/buildscripts/standalone/gradle/build.gradle
 
-    cd /opt/exhibitor
-    unzip gradle-1.5-bin.zip
-    PATH=/opt/exhibitor/gradle-1.5/bin:$PATH
+  cd /opt/exhibitor
+  unzip gradle-1.5-bin.zip
+  PATH=/opt/exhibitor/gradle-1.5/bin:$PATH
 
-    gradle jar
-    mv /opt/exhibitor/build/libs/exhibitor-1.5.0.jar /opt
-    rm -rf /opt/exhibitor
-  )
-fi
+  gradle jar
+  mv /opt/exhibitor/build/libs/exhibitor-1.5.0.jar /opt
+  rm -rf /opt/exhibitor
+)
 
 [ -d /opt/zookeeper-3.4.5 ] || (
   download /opt http://apache.osuosl.org/zookeeper/zookeeper-3.4.5/zookeeper-3.4.5.tar.gz
